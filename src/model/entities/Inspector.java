@@ -37,7 +37,7 @@ public class Inspector implements ModelEventListener {
 	public float getBlockTime() {
 		if (blockedEvent != null) {
 			System.out.println("Inspector " + id + " was blocked at end of sim");
-			blockTimes.add(ApplicationContext.getInstance().getFutureEventList().getCurrentEventTime() - blockedEvent.getEventTime());
+			blockTimes.add(ApplicationContext.getInstance().getFutureEventList().getSystemTime() - blockedEvent.getEventTime());
 		}
 		return blockTimes.stream().reduce((a,b) -> a+b).orElse(0f);
 	}

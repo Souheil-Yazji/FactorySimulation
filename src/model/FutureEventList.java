@@ -8,18 +8,23 @@ import model.event.ModelEvent;
 public class FutureEventList {
 	private Queue<ModelEvent> eventList = new PriorityQueue<>();
 
-	private float currentEventTime = 0f;
+	private float systemTime = 0f;
 	private boolean isDone = false;
 
 	public void enqueueEvent(ModelEvent event) {
 		if (!isDone) {
-			currentEventTime = event.getEventTime();
 			eventList.add(event);
 		}
 	}
 
 	public ModelEvent dequeueEvent() {
-		return eventList.poll();
+		ModelEvent nextEvent = eventList.poll();
+		systemTime = nextEvent.getEventTime();
+		return nextEvent;
+	}
+
+	public void setDone(boolean isDone) {
+		this.isDone = isDone;
 	}
 
 	public boolean isDoneSim() {
@@ -27,11 +32,7 @@ public class FutureEventList {
 		return isDone && eventList.isEmpty();
 	}
 
-	public void setDone(boolean isDone) {
-		this.isDone = isDone;
-	}
-
-	public float getCurrentEventTime() {
-		return currentEventTime;
+	public float getSystemTime() {
+		return systemTime;
 	}
 }
