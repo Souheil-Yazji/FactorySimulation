@@ -33,6 +33,7 @@ public class Runner extends Thread {
 
 		System.out.println("Starting Simulation");
 		System.out.println("===============================================================");
+
 		while (!eventList.isDoneSim()) {
 			ModelEvent nextEvent = eventList.dequeueEvent();
 			if (nextEvent != null) {

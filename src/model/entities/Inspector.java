@@ -5,17 +5,17 @@ import java.util.List;
 import java.util.Random;
 
 import model.ApplicationContext;
-import model.event.AddToQueueEvent;
+import model.event.AddToBufferEvent;
 import model.event.InspectEvent;
 import model.event.ModelEvent;
 import model.event.ModelEventListener;
 import model.event.ModelEventType;
-import model.event.ProduceEvent;
+import model.event.ProductionEvent;
 
 public class Inspector implements ModelEventListener {
 	private final int id;
 
-	private AddToQueueEvent blockedEvent;
+	private AddToBufferEvent blockedEvent;
 	private List<Float> blockTimes = new ArrayList<>();
 
 	private List<Buffer> targetBuffers = new ArrayList<>();
@@ -45,17 +45,17 @@ public class Inspector implements ModelEventListener {
 	@Override
 	public void onEvent(ModelEvent event) {
 		if (event.getType() == ModelEventType.PRODUCE) {
-			handleProduceEvent((ProduceEvent) event);
+			handleProduceEvent((ProductionEvent) event);
 
 		} else if (event.getType() == ModelEventType.INSPECT) {
 			handleInspectEvent((InspectEvent) event);
 
 		} else if (event.getType() == ModelEventType.ADD_TO_QUEUE) {
-			handleAddToQueueEvent((AddToQueueEvent) event);
+			handleAddToQueueEvent((AddToBufferEvent) event);
 		}
 	}
 
-	private void handleProduceEvent(ProduceEvent produceEvent) {
+	private void handleProduceEvent(ProductionEvent produceEvent) {
 		// If we were blocked, try to see if we can push to a buffer
 		if (blockedEvent != null) {
 			// check if our target buffers could be impacted
@@ -66,7 +66,7 @@ public class Inspector implements ModelEventListener {
 			Buffer targetBuffer = determineTargetBuffer(blockedEvent.getComponentType());
 			if (targetBuffer.addComponent()) {
 				// if we can push, notify via event and record the amount of time we spent blocked
-				AddToQueueEvent addToQueue = new AddToQueueEvent(produceEvent.getEventTime(), id, blockedEvent.getComponentType());
+				AddToBufferEvent addToQueue = new AddToBufferEvent(produceEvent.getEventTime(), id, blockedEvent.getComponentType());
 				ApplicationContext.getInstance().getFutureEventList().enqueueEvent(addToQueue);
 				
 				blockTimes.add(produceEvent.getEventTime() - blockedEvent.getEventTime());
@@ -89,12 +89,12 @@ public class Inspector implements ModelEventListener {
 
 		// determine time to inspect and buffer to push to
 		float addQueueTime = event.getEventTime() + determineInspectionTime(event.getComponentType());
-		AddToQueueEvent addToQueue = new AddToQueueEvent(addQueueTime, id, event.getComponentType());
+		AddToBufferEvent addToQueue = new AddToBufferEvent(addQueueTime, id, event.getComponentType());
 		ApplicationContext.getInstance().getFutureEventList().enqueueEvent(addToQueue);
 		System.out.println("Inspector " + id + " inspecting component " + event.getComponentType() + " until " + addQueueTime);
 	}
 
-	private void handleAddToQueueEvent(AddToQueueEvent event) {
+	private void handleAddToQueueEvent(AddToBufferEvent event) {
 		if (event.getInspectorId() != id) {
 			return; // This event isn't for me
 		}
@@ -120,9 +120,8 @@ public class Inspector implements ModelEventListener {
 	private Buffer determineTargetBuffer(ComponentType componentType) {
 		// get target buffers that can consume the componentType
 		// and finds the least populated target buffers
-		Buffer chosenBuffer = targetBuffers.stream().filter(buffer -> buffer.getComponentType() == componentType)
-				.min((a,b) -> compareBuffers(a,b)).orElseThrow();
-		return chosenBuffer;
+		return targetBuffers.stream().filter(buffer -> buffer.getComponentType() == componentType)
+				.min(this::compareBuffers).orElseThrow();
 	}
 
 	private int compareBuffers(Buffer a, Buffer b) {

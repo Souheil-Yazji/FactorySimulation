@@ -23,8 +23,8 @@ public class FutureEventList {
 	}
 
 	public boolean isDoneSim() {
-		isDone = eventList.peek().getEventTime() >= ApplicationContext.STOP_SIM_TIME;
-		return isDone;
+		isDone = eventList.peek() == null || eventList.peek().getEventTime() >= ApplicationContext.STOP_SIM_TIME;
+		return isDone && eventList.isEmpty();
 	}
 
 	public void setDone(boolean isDone) {

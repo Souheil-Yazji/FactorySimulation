@@ -1,9 +1,9 @@
 package model.event;
 
-public class ProduceEvent extends ModelEvent {
+public class ProductionEvent extends ModelEvent {
 	private final int workStationID;
 
-	public ProduceEvent(float eventTime, int id) {
+	public ProductionEvent(float eventTime, int id) {
 		super(eventTime);
 		this.workStationID = id;
 	}
