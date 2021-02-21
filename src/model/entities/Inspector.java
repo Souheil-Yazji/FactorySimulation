@@ -39,7 +39,7 @@ public class Inspector implements ModelEventListener {
 			System.out.println("Inspector " + id + " was blocked at end of sim");
 			blockTimes.add(ApplicationContext.getInstance().getFutureEventList().getSystemTime() - blockedEvent.getEventTime());
 		}
-		return blockTimes.stream().reduce((a,b) -> a+b).orElse(0f);
+		return blockTimes.stream().reduce((a, b) -> a + b).orElse(0f);
 	}
 
 	@Override
@@ -87,7 +87,7 @@ public class Inspector implements ModelEventListener {
 			return; // This event isn't for me
 		}
 
-		// determine time to inspect and buffer to push to
+		// determine time to inspect and schedule buffer push
 		float addQueueTime = event.getEventTime() + determineInspectionTime(event.getComponentType());
 		AddToBufferEvent addToQueue = new AddToBufferEvent(addQueueTime, id, event.getComponentType());
 		ApplicationContext.getInstance().getFutureEventList().enqueueEvent(addToQueue);
@@ -99,6 +99,7 @@ public class Inspector implements ModelEventListener {
 			return; // This event isn't for me
 		}
 
+		// find a buffer to push this component to
 		Buffer targetBuffer = determineTargetBuffer(event.getComponentType());
 		if (!targetBuffer.addComponent()) {
 			// We can't add to the full buffer, block this until the buffer is freed

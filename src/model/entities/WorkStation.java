@@ -17,7 +17,6 @@ public class WorkStation implements ModelEventListener {
 
 	private int throughput = 0;
 	private boolean isBusy = false;
-	private float lastHandledEventTime = 0;
 
 	public WorkStation(int id, ProductType productType) {
 		this.id = id;
@@ -41,24 +40,21 @@ public class WorkStation implements ModelEventListener {
 	public void onEvent(ModelEvent event) {
 		// Workstations only care about add to queue events and Produce Events
 		if (event.getType() == ModelEventType.ADD_TO_BUFFER && !isBusy) {
-			lastHandledEventTime = event.getEventTime();
-
 			// try to start production
-			attemptProduction();
+			attemptProduction(event.getEventTime());
 
 		} else if (event.getType() == ModelEventType.PRODUCTION) {
 			if (((ProductionEvent) event).getWorkStationId() != id) {
 				return;
 			}
 
-			lastHandledEventTime = event.getEventTime();
 			// create product
 			throughput++;
 			System.out.println("WorkStation " + id + " Produced " + productType);
 			isBusy = false;
 
 			// try to start another production
-			attemptProduction();
+			attemptProduction(event.getEventTime());
 		}
 	}
 
@@ -66,7 +62,7 @@ public class WorkStation implements ModelEventListener {
 		return ApplicationContext.getInstance().getDelayGenerator().generateProductionDelay(id);
 	}
 
-	private void attemptProduction() {
+	private void attemptProduction(float startTime) {
 		// Check if required components are available
 		if (requiredComponents.stream().anyMatch(Buffer::isEmpty)) {
 			return;
@@ -76,8 +72,7 @@ public class WorkStation implements ModelEventListener {
 		requiredComponents.forEach(Buffer::removeComponent);
 		
 		// figure out how long it took and notify others that you produced a product
-		lastHandledEventTime = lastHandledEventTime + determineProcessTime();
-		ApplicationContext.getInstance().getFutureEventList().enqueueEvent(new ProductionEvent(lastHandledEventTime, id));
+		ApplicationContext.getInstance().getFutureEventList().enqueueEvent(new ProductionEvent(startTime + determineProcessTime(), id));
 		System.out.println("WorkStation " + id + " Starting Production of " + productType);
 		isBusy = true;
 	}
