@@ -40,13 +40,13 @@ public class WorkStation implements ModelEventListener {
 	@Override
 	public void onEvent(ModelEvent event) {
 		// Workstations only care about add to queue events and Produce Events
-		if (event.getType() == ModelEventType.ADD_TO_QUEUE && !isBusy) {
+		if (event.getType() == ModelEventType.ADD_TO_BUFFER && !isBusy) {
 			lastHandledEventTime = event.getEventTime();
 
 			// try to start production
 			attemptProduction();
 
-		} else if (event.getType() == ModelEventType.PRODUCE) {
+		} else if (event.getType() == ModelEventType.PRODUCTION) {
 			if (((ProductionEvent) event).getWorkStationId() != id) {
 				return;
 			}

@@ -10,7 +10,7 @@ public class ProductionEvent extends ModelEvent {
 
 	@Override
 	public ModelEventType getType() {
-		return ModelEventType.PRODUCE;
+		return ModelEventType.PRODUCTION;
 	}
 
 	public int getWorkStationId() {

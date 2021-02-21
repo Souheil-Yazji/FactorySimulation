@@ -14,7 +14,7 @@ public class AddToBufferEvent extends ModelEvent {
 
 	@Override
 	public ModelEventType getType() {
-		return ModelEventType.ADD_TO_QUEUE;
+		return ModelEventType.ADD_TO_BUFFER;
 	}
 
 	public int getInspectorId() {

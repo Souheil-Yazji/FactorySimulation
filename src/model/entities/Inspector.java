@@ -44,13 +44,13 @@ public class Inspector implements ModelEventListener {
 
 	@Override
 	public void onEvent(ModelEvent event) {
-		if (event.getType() == ModelEventType.PRODUCE) {
+		if (event.getType() == ModelEventType.PRODUCTION) {
 			handleProduceEvent((ProductionEvent) event);
 
 		} else if (event.getType() == ModelEventType.INSPECT) {
 			handleInspectEvent((InspectEvent) event);
 
-		} else if (event.getType() == ModelEventType.ADD_TO_QUEUE) {
+		} else if (event.getType() == ModelEventType.ADD_TO_BUFFER) {
 			handleAddToQueueEvent((AddToBufferEvent) event);
 		}
 	}
