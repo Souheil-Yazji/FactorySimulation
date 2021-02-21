@@ -2,11 +2,11 @@ package model.event;
 
 import model.entities.ComponentType;
 
-public class AddToQueueEvent extends ModelEvent {
+public class AddToBufferEvent extends ModelEvent {
 	private final ComponentType componentType;
 	private final int inspectorId;
 
-	public AddToQueueEvent(float eventTime, int inspectorId, ComponentType componentType) {
+	public AddToBufferEvent(float eventTime, int inspectorId, ComponentType componentType) {
 		super(eventTime);
 		this.inspectorId = inspectorId;
 		this.componentType = componentType;

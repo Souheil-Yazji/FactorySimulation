@@ -7,7 +7,7 @@ import model.ApplicationContext;
 import model.event.ModelEvent;
 import model.event.ModelEventListener;
 import model.event.ModelEventType;
-import model.event.ProduceEvent;
+import model.event.ProductionEvent;
 
 public class WorkStation implements ModelEventListener {
 	private final List<Buffer> requiredComponents = new ArrayList<>();
@@ -47,7 +47,7 @@ public class WorkStation implements ModelEventListener {
 			attemptProduction();
 
 		} else if (event.getType() == ModelEventType.PRODUCE) {
-			if (((ProduceEvent) event).getWorkStationId() != id) {
+			if (((ProductionEvent) event).getWorkStationId() != id) {
 				return;
 			}
 
@@ -77,7 +77,7 @@ public class WorkStation implements ModelEventListener {
 		
 		// figure out how long it took and notify others that you produced a product
 		lastHandledEventTime = lastHandledEventTime + determineProcessTime();
-		ApplicationContext.getInstance().getFutureEventList().enqueueEvent(new ProduceEvent(lastHandledEventTime, id));
+		ApplicationContext.getInstance().getFutureEventList().enqueueEvent(new ProductionEvent(lastHandledEventTime, id));
 		System.out.println("WorkStation " + id + " Starting Production of " + productType);
 		isBusy = true;
 	}
