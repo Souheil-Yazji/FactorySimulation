@@ -59,7 +59,7 @@ public class WorkStation implements ModelEventListener {
 	}
 
 	public float determineProcessTime() {
-		return ApplicationContext.getInstance().getDelayGenerator().generateProductionDelay(id);
+		return ApplicationContext.getInstance().getDelayGenerator().generateProductionDelay(productType);
 	}
 
 	private void attemptProduction(float startTime) {

@@ -1,5 +1,8 @@
 package model;
 
+import model.delay.DelayGenerator;
+import model.delay.DistributionDelayGenerator;
+
 public class ApplicationContext {
 	private static final ApplicationContext INSTANCE = new ApplicationContext();
 	public static final int BUFFER_SIZE = 2;
@@ -13,7 +16,7 @@ public class ApplicationContext {
 	public static final String W3_PRODUCTION_DATA = "ws3.dat";
 
 	private final FutureEventList eventList = new FutureEventList();
-	private final DelayGenerator delayGenerator = new DelayGenerator();
+	private final DelayGenerator delayGenerator = new DistributionDelayGenerator();
 
 	private ApplicationContext() {}
 
