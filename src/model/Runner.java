@@ -2,6 +2,9 @@ package model;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map.Entry;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 import model.entities.Buffer;
 import model.entities.ComponentType;
@@ -19,6 +22,9 @@ public class Runner extends Thread {
 
 	private List<ModelEventListener> eventListeners = new ArrayList<>();
 	private FutureEventList eventList = ApplicationContext.getInstance().getFutureEventList();
+
+	// 
+	private SortedMap<Integer, Results> historicalResults = new TreeMap<>();
 
 	private Inspector c1Inspector;
 	private Inspector c2c3Inspector;
@@ -39,18 +45,66 @@ public class Runner extends Thread {
 			if (nextEvent != null) {
 				System.out.println("Consuming Event: " + nextEvent.getType() + " which occurs at " + nextEvent.getEventTime());
 				eventListeners.forEach(listener -> listener.onEvent(nextEvent));
+
+				// Check if we need to log measurements
+				int interval = (int)(nextEvent.getEventTime()) / ApplicationContext.COLLECT_METRIC_INTERVAL;
+				if (interval != 0 &&
+						!historicalResults.containsKey(interval)) {
+
+					historicalResults.put(interval, 
+							new Results(
+									p1Station.getThroughput(), p2Station.getThroughput(), p3Station.getThroughput(),
+									c1Inspector.getBlockTime(), c2c3Inspector.getBlockTime()));
+				}
 			}
 		}
+		historicalResults.put(ApplicationContext.STOP_SIM_TIME / ApplicationContext.COLLECT_METRIC_INTERVAL, 
+				new Results(
+						p1Station.getThroughput(), p2Station.getThroughput(), p3Station.getThroughput(),
+						c1Inspector.getBlockTime(), c2c3Inspector.getBlockTime()));
 
 		// Log the throughput of each workstation
 		System.out.println("===============================================================");
-		System.out.println("P1 WorkStation produced: " + p1Station.getThroughput() + " of Product " + p1Station.getProductType());
-		System.out.println("P2 WorkStation produced: " + p2Station.getThroughput() + " of Product " + p2Station.getProductType());
-		System.out.println("P3 WorkStation produced: " + p3Station.getThroughput() + " of Product " + p3Station.getProductType());
 
-		// Log Blocked Time
-		System.out.println("C1 Inspector " + c1Inspector.getId() + " spent " + c1Inspector.getBlockTime() + " time units blocked");
-		System.out.println("C2-C3 Inspector " + c2c3Inspector.getId() + " spent " + c2c3Inspector.getBlockTime() + " time units blocked");
+		int lastTime = 0;
+		Results lastResult = new Results(0,0,0,0,0);
+
+		for (Entry<Integer, Results> measurement : historicalResults.entrySet()) {
+			int time = measurement.getKey();
+			Results result = measurement.getValue();
+
+			System.out.println("== Between Time: " + 
+					lastTime * ApplicationContext.COLLECT_METRIC_INTERVAL + " to " +
+					time * ApplicationContext.COLLECT_METRIC_INTERVAL);
+
+			System.out.println("==== P1 WorkStation produced: " + 
+					(result.p1Throughput - lastResult.p1Throughput) + " of Product " + p1Station.getProductType());
+			System.out.println("==== P2 WorkStation produced: " + 
+					(result.p2Throughput - lastResult.p2Throughput) + " of Product " + p2Station.getProductType());
+			System.out.println("==== P3 WorkStation produced: " + 
+					(result.p3Throughput - lastResult.p3Throughput) + " of Product " + p3Station.getProductType());
+			System.out.println("==== C1 Inspector spent " + 
+					(result.c1BlockTime - lastResult.c1BlockTime) + " time units blocked");
+			System.out.println("==== C2-C3 Inspector spent " + 
+					(result.c2c3BlockTime - lastResult.c2c3BlockTime) + " time units blocked");
+
+			lastTime = time;
+			lastResult = result;
+		}
+
+		System.out.println("===============================================================");
+
+		System.out.println("== Cumulative Results");
+		System.out.println("==== P1 WorkStation produced: " + 
+				(lastResult.p1Throughput) + " of Product " + p1Station.getProductType());
+		System.out.println("==== P2 WorkStation produced: " + 
+				(lastResult.p2Throughput) + " of Product " + p2Station.getProductType());
+		System.out.println("==== P3 WorkStation produced: " + 
+				(lastResult.p3Throughput) + " of Product " + p3Station.getProductType());
+		System.out.println("==== C1 Inspector spent " + 
+				(lastResult.c1BlockTime) + " time units blocked");
+		System.out.println("==== C2-C3 Inspector spent " + 
+				(lastResult.c2c3BlockTime) + " time units blocked");
 	}
 
 	private void setUpModel() {
@@ -94,5 +148,24 @@ public class Runner extends Thread {
 		// Add Initial Events (one per inspector)
 		eventList.enqueueEvent(new InspectEvent(0f, 1, ComponentType.C1));
 		eventList.enqueueEvent(new InspectEvent(0f, 2, ComponentType.C2));
+	}
+
+	private class Results {
+		final int p1Throughput;
+		final int p2Throughput;
+		final int p3Throughput;
+
+		final float c1BlockTime;
+		final float c2c3BlockTime;
+
+		Results(int p1Throughput, int p2Throughput, int p3Throughput, float c1BlockTime, float c2c3BlockTime) {
+			this.p1Throughput = p1Throughput;
+			this.p2Throughput = p2Throughput;
+			this.p3Throughput = p3Throughput;
+
+			this.c1BlockTime = c1BlockTime;
+			this.c2c3BlockTime = c2c3BlockTime;
+			
+		}
 	}
 }

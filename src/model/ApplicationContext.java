@@ -6,7 +6,8 @@ import model.delay.DistributionDelayGenerator;
 public class ApplicationContext {
 	private static final ApplicationContext INSTANCE = new ApplicationContext();
 	public static final int BUFFER_SIZE = 2;
-	public static final float STOP_SIM_TIME = 1500f;
+	public static final int STOP_SIM_TIME = 1500;
+	public static final int COLLECT_METRIC_INTERVAL = 250;
 
 	public static final String C1_INSPECTION_DATA = "servinsp1.dat";
 	public static final String C2_INSPECTION_DATA = "servinsp22.dat";
