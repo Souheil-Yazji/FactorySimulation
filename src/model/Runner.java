@@ -89,52 +89,38 @@ public class Runner extends Thread {
 			}
 		}
 
-		// Log the throughput of each workstation
-		int lastTime = ApplicationContext.CUT_OFF_INTERVAL;
+		// Log the throughput of each workstations
 		Results lastResult = new Results(0,0,0,0,0);
 
+		StringBuilder p1Throughput = new StringBuilder();
+		StringBuilder p2Throughput = new StringBuilder();
+		StringBuilder p3Throughput = new StringBuilder();
+		StringBuilder c1BlockTime = new StringBuilder();
+		StringBuilder c2c3BlockTime = new StringBuilder();
+
 		for (Entry<Integer, Results> measurement : historicalResults.entrySet()) {
-			int time = measurement.getKey();
 			Results result = measurement.getValue();
 
-			System.out.println("== Between Time: " + 
-					lastTime * ApplicationContext.COLLECT_METRIC_INTERVAL + " to " +
-					time * ApplicationContext.COLLECT_METRIC_INTERVAL);
+			p1Throughput.append((result.p1Throughput - lastResult.p1Throughput)).append(',');
+			p2Throughput.append((result.p2Throughput - lastResult.p2Throughput)).append(',');
+			p3Throughput.append((result.p3Throughput - lastResult.p3Throughput)).append(',');
+			c1BlockTime.append(result.c1BlockTime).append(',');
+			c2c3BlockTime.append(result.c2c3BlockTime).append(',');
 
-			System.out.println("==== P1 WorkStation produced: " + 
-					(result.p1Throughput - lastResult.p1Throughput) + " of Product " + p1Station.getProductType());
-			System.out.println("==== P2 WorkStation produced: " + 
-					(result.p2Throughput - lastResult.p2Throughput) + " of Product " + p2Station.getProductType());
-			System.out.println("==== P3 WorkStation produced: " + 
-					(result.p3Throughput - lastResult.p3Throughput) + " of Product " + p3Station.getProductType());
-			System.out.println("==== C1 Inspector spent " + 
-					(result.c1BlockTime) + " time units blocked");
-			System.out.println("==== C2-C3 Inspector spent " + 
-					(result.c2c3BlockTime) + " time units blocked");
-
-			lastTime = time;
 			lastResult = result;
 		}
+
+		System.out.println(p1Throughput);
+		System.out.println(p2Throughput);
+		System.out.println(p3Throughput);
+		System.out.println(c1BlockTime);
+		System.out.println(c2c3BlockTime);
 
 		System.out.println("===============================================================");
 
 		Results cumulativeResults = new Results(lastResult.p1Throughput, lastResult.p2Throughput, lastResult.p3Throughput,
 												c1Inspector.getBlockTime(ApplicationContext.STOP_SIM_TIME, cutOffTime),
 												c2c3Inspector.getBlockTime(ApplicationContext.STOP_SIM_TIME, cutOffTime));
-
-		System.out.println("== Cumulative Results");
-		System.out.println("==== P1 WorkStation produced: " + 
-				(cumulativeResults.p1Throughput) + " of Product " + p1Station.getProductType());
-		System.out.println("==== P2 WorkStation produced: " + 
-				(cumulativeResults.p2Throughput) + " of Product " + p2Station.getProductType());
-		System.out.println("==== P3 WorkStation produced: " + 
-				(cumulativeResults.p3Throughput) + " of Product " + p3Station.getProductType());
-		System.out.println("==== C1 Inspector spent " + 
-				(cumulativeResults.c1BlockTime) + " time units blocked");
-		System.out.println("==== C2-C3 Inspector spent " + 
-				(cumulativeResults.c2c3BlockTime) + " time units blocked");
-
-		System.out.println("============================== SIM RUN " + runNumber + " END =================================");
 
 		return cumulativeResults;
 	}
@@ -145,8 +131,8 @@ public class Runner extends Thread {
 		eventListeners.clear();
 
 		// Create Entities
-		c1Inspector = new Inspector(1, List.of(ComponentType.C1));
-		c2c3Inspector = new Inspector(2, List.of(ComponentType.C2, ComponentType.C3));
+		c1Inspector = new Inspector(1, List.of(ComponentType.C1), ApplicationContext.INSPECTOR_POLICY_INVERTED);
+		c2c3Inspector = new Inspector(2, List.of(ComponentType.C2, ComponentType.C3), ApplicationContext.INSPECTOR_POLICY_LEAST_POP);
 
 		p1Station = new WorkStation(1, ProductType.P1);
 		p2Station = new WorkStation(2, ProductType.P2);
