@@ -23,9 +23,6 @@ public class Runner extends Thread {
 	private List<ModelEventListener> eventListeners = new ArrayList<>();
 	private FutureEventList eventList = ApplicationContext.getInstance().getFutureEventList();
 
-	// 
-	private SortedMap<Integer, Results> historicalResults = new TreeMap<>();
-
 	private Inspector c1Inspector;
 	private Inspector c2c3Inspector;
 
@@ -35,38 +32,65 @@ public class Runner extends Thread {
 
 	@Override
 	public void run() {
+		List<Results> betweenReplicationResults = new ArrayList<>();
+		for (int i = 0; i < ApplicationContext.REPLICATIONS; i++) {
+			betweenReplicationResults.add(singleRun(i + 1));
+		}
+
+		System.out.println("===============================================================");
+		System.out.println("Between Replication Results: (P1 Throughput, P2 Throughput, P3 Throughput, C1 Block Time, C2C3 Block Time)");
+		for (Results result : betweenReplicationResults) {
+			StringBuilder out = new StringBuilder()
+										.append(result.p1Throughput).append(',')
+										.append(result.p2Throughput).append(',')
+										.append(result.p3Throughput).append(',')
+										.append(result.c1BlockTime).append(',')
+										.append(result.c2c3BlockTime);
+			System.out.println(out);
+		}
+	}
+
+	private Results singleRun(int runNumber) {
 		setUpModel();
 
-		System.out.println("Starting Simulation");
-		System.out.println("===============================================================");
+		System.out.println("============================== SIM RUN " + runNumber + " START =================================");
+
+		SortedMap<Integer, Results> historicalResults = new TreeMap<>();
+
+		Results preCutOffResults = null;
+		float cutOffTime = ApplicationContext.CUT_OFF_INTERVAL * ApplicationContext.COLLECT_METRIC_INTERVAL;
 
 		while (!eventList.isDoneSim()) {
 			ModelEvent nextEvent = eventList.dequeueEvent();
 			if (nextEvent != null) {
-				System.out.println("Consuming Event: " + nextEvent.getType() + " which occurs at " + nextEvent.getEventTime());
 				eventListeners.forEach(listener -> listener.onEvent(nextEvent));
 
-				// Check if we need to log measurements
+				// Log Measurements
 				int interval = (int)(nextEvent.getEventTime()) / ApplicationContext.COLLECT_METRIC_INTERVAL;
-				if (interval != 0 &&
-						!historicalResults.containsKey(interval)) {
+				
+				// Cut off interval metrics need to be disregarded
+				if (interval == ApplicationContext.CUT_OFF_INTERVAL && preCutOffResults == null) {
+					preCutOffResults = new Results(p1Station.getThroughput(), p2Station.getThroughput(), p3Station.getThroughput(),
+													c1Inspector.getBlockTime(cutOffTime, 0), 
+													c2c3Inspector.getBlockTime(cutOffTime, 0));
 
+				// Take Metrics for Each Interval
+				} else if (interval > ApplicationContext.CUT_OFF_INTERVAL && !historicalResults.containsKey(interval) && preCutOffResults != null) {
+					float intervalEndTime = interval * ApplicationContext.COLLECT_METRIC_INTERVAL;
+					float intervalStartTime = (interval - 1) * ApplicationContext.COLLECT_METRIC_INTERVAL;
 					historicalResults.put(interval, 
 							new Results(
-									p1Station.getThroughput(), p2Station.getThroughput(), p3Station.getThroughput(),
-									c1Inspector.getBlockTime(), c2c3Inspector.getBlockTime()));
+									p1Station.getThroughput() - preCutOffResults.p1Throughput, 
+									p2Station.getThroughput() - preCutOffResults.p2Throughput,
+									p3Station.getThroughput() - preCutOffResults.p3Throughput,
+									c1Inspector.getBlockTime(intervalEndTime, intervalStartTime),
+									c2c3Inspector.getBlockTime(intervalEndTime, intervalStartTime)));
 				}
 			}
 		}
-		historicalResults.put(ApplicationContext.STOP_SIM_TIME / ApplicationContext.COLLECT_METRIC_INTERVAL, 
-				new Results(
-						p1Station.getThroughput(), p2Station.getThroughput(), p3Station.getThroughput(),
-						c1Inspector.getBlockTime(), c2c3Inspector.getBlockTime()));
 
 		// Log the throughput of each workstation
-		System.out.println("===============================================================");
-
-		int lastTime = 0;
+		int lastTime = ApplicationContext.CUT_OFF_INTERVAL;
 		Results lastResult = new Results(0,0,0,0,0);
 
 		for (Entry<Integer, Results> measurement : historicalResults.entrySet()) {
@@ -84,9 +108,9 @@ public class Runner extends Thread {
 			System.out.println("==== P3 WorkStation produced: " + 
 					(result.p3Throughput - lastResult.p3Throughput) + " of Product " + p3Station.getProductType());
 			System.out.println("==== C1 Inspector spent " + 
-					(result.c1BlockTime - lastResult.c1BlockTime) + " time units blocked");
+					(result.c1BlockTime) + " time units blocked");
 			System.out.println("==== C2-C3 Inspector spent " + 
-					(result.c2c3BlockTime - lastResult.c2c3BlockTime) + " time units blocked");
+					(result.c2c3BlockTime) + " time units blocked");
 
 			lastTime = time;
 			lastResult = result;
@@ -94,20 +118,32 @@ public class Runner extends Thread {
 
 		System.out.println("===============================================================");
 
+		Results cumulativeResults = new Results(lastResult.p1Throughput, lastResult.p2Throughput, lastResult.p3Throughput,
+												c1Inspector.getBlockTime(ApplicationContext.STOP_SIM_TIME, cutOffTime),
+												c2c3Inspector.getBlockTime(ApplicationContext.STOP_SIM_TIME, cutOffTime));
+
 		System.out.println("== Cumulative Results");
 		System.out.println("==== P1 WorkStation produced: " + 
-				(lastResult.p1Throughput) + " of Product " + p1Station.getProductType());
+				(cumulativeResults.p1Throughput) + " of Product " + p1Station.getProductType());
 		System.out.println("==== P2 WorkStation produced: " + 
-				(lastResult.p2Throughput) + " of Product " + p2Station.getProductType());
+				(cumulativeResults.p2Throughput) + " of Product " + p2Station.getProductType());
 		System.out.println("==== P3 WorkStation produced: " + 
-				(lastResult.p3Throughput) + " of Product " + p3Station.getProductType());
+				(cumulativeResults.p3Throughput) + " of Product " + p3Station.getProductType());
 		System.out.println("==== C1 Inspector spent " + 
-				(lastResult.c1BlockTime) + " time units blocked");
+				(cumulativeResults.c1BlockTime) + " time units blocked");
 		System.out.println("==== C2-C3 Inspector spent " + 
-				(lastResult.c2c3BlockTime) + " time units blocked");
+				(cumulativeResults.c2c3BlockTime) + " time units blocked");
+
+		System.out.println("============================== SIM RUN " + runNumber + " END =================================");
+
+		return cumulativeResults;
 	}
 
 	private void setUpModel() {
+		// Reset Future Event List and Listeners
+		eventList.resetSystem();
+		eventListeners.clear();
+
 		// Create Entities
 		c1Inspector = new Inspector(1, List.of(ComponentType.C1));
 		c2c3Inspector = new Inspector(2, List.of(ComponentType.C2, ComponentType.C3));

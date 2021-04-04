@@ -16,7 +16,7 @@ public class Inspector implements ModelEventListener {
 	private final int id;
 
 	private AddToBufferEvent blockedEvent;
-	private List<Float> blockTimes = new ArrayList<>();
+	private List<BlockInterval> blockTimes = new ArrayList<>();
 
 	private List<Buffer> targetBuffers = new ArrayList<>();
 	private List<ComponentType> componentTypes = new ArrayList<>();
@@ -34,11 +34,27 @@ public class Inspector implements ModelEventListener {
 		return id;
 	}
 
-	public float getBlockTime() {
-		if (blockedEvent != null) {
-			blockTimes.add(ApplicationContext.getInstance().getFutureEventList().getSystemTime() - blockedEvent.getEventTime());
+	public float getBlockTime(float measureTime, float startTime) {
+		float totalBlockedTime = 0f;
+		for (BlockInterval interval : blockTimes) {
+			if (interval.startBlockTime >= startTime && interval.endBlockTime < measureTime) {
+				totalBlockedTime += (interval.endBlockTime - interval.startBlockTime);
+
+			} else if (interval.startBlockTime < startTime && interval.endBlockTime < measureTime && interval.endBlockTime > startTime) {
+				totalBlockedTime += (interval.endBlockTime - startTime);
+
+			} else if (interval.startBlockTime >= startTime && interval.endBlockTime > measureTime) {
+				totalBlockedTime += (measureTime - interval.startBlockTime);
+			}
 		}
-		return blockTimes.stream().reduce((a, b) -> a + b).orElse(0f);
+		
+		if (blockedEvent != null && blockedEvent.getEventTime() >= startTime) {
+			totalBlockedTime += (measureTime - blockedEvent.getEventTime());
+		} else if (blockedEvent != null && blockedEvent.getEventTime() < startTime) {
+			totalBlockedTime += (measureTime - startTime);
+		}
+
+		return totalBlockedTime;
 	}
 
 	@Override
@@ -65,18 +81,14 @@ public class Inspector implements ModelEventListener {
 			Buffer targetBuffer = determineTargetBuffer(blockedEvent.getComponentType());
 			if (targetBuffer.addComponent()) {
 				// if we can push, notify via event and record the amount of time we spent blocked
-				AddToBufferEvent addToQueue = new AddToBufferEvent(produceEvent.getEventTime(), id, blockedEvent.getComponentType());
-				ApplicationContext.getInstance().getFutureEventList().enqueueEvent(addToQueue);
 				
-				blockTimes.add(produceEvent.getEventTime() - blockedEvent.getEventTime());
+				blockTimes.add(new BlockInterval(blockedEvent.getEventTime(), produceEvent.getEventTime()));
+				AddToBufferEvent addToQueue = new AddToBufferEvent(produceEvent.getEventTime(), id, blockedEvent.getComponentType());
 
 				// unblock
 				blockedEvent = null;
 
-				// immediately start inspecting next component
-				ComponentType nextComponent = determineNextComponent();
-				ApplicationContext.getInstance().getFutureEventList().enqueueEvent(
-						new InspectEvent(produceEvent.getEventTime(), id, nextComponent));
+				ApplicationContext.getInstance().getFutureEventList().enqueueEvent(addToQueue);
 			}
 		}
 	}
@@ -84,6 +96,10 @@ public class Inspector implements ModelEventListener {
 	private void handleInspectEvent(InspectEvent event) {
 		if (event.getInspectorId() != id) {
 			return; // This event isn't for me
+		}
+
+		if (blockedEvent != null) {
+			return; // I am blocked
 		}
 
 		// determine time to inspect and schedule buffer push
@@ -95,6 +111,10 @@ public class Inspector implements ModelEventListener {
 	private void handleAddToQueueEvent(AddToBufferEvent event) {
 		if (event.getInspectorId() != id) {
 			return; // This event isn't for me
+		}
+
+		if (blockedEvent != null) {
+			return; // I am blocked
 		}
 
 		// find a buffer to push this component to
@@ -144,5 +164,15 @@ public class Inspector implements ModelEventListener {
 		Random random = new Random();
 		int r = random.nextInt(componentTypes.size());
 		return componentTypes.get(r);
+	}
+
+	private class BlockInterval {
+		final float startBlockTime;
+		final float endBlockTime;
+
+		BlockInterval(float startTime, float endTime) {
+			startBlockTime = startTime;
+			endBlockTime = endTime;
+		}
 	}
 }

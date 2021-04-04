@@ -6,9 +6,8 @@ import java.util.Queue;
 import model.event.ModelEvent;
 
 public class FutureEventList {
-	private Queue<ModelEvent> eventList = new PriorityQueue<>();
+	private final Queue<ModelEvent> eventList = new PriorityQueue<>();
 
-	private float systemTime = 0f;
 	private boolean isDone = false;
 
 	public void enqueueEvent(ModelEvent event) {
@@ -18,13 +17,7 @@ public class FutureEventList {
 	}
 
 	public ModelEvent dequeueEvent() {
-		ModelEvent nextEvent = eventList.poll();
-		systemTime = nextEvent.getEventTime();
-		return nextEvent;
-	}
-
-	public void setDone(boolean isDone) {
-		this.isDone = isDone;
+		return eventList.poll();
 	}
 
 	public boolean isDoneSim() {
@@ -32,7 +25,8 @@ public class FutureEventList {
 		return isDone && eventList.isEmpty();
 	}
 
-	public float getSystemTime() {
-		return systemTime;
+	public void resetSystem() {
+		eventList.clear();
+		isDone = false;
 	}
 }

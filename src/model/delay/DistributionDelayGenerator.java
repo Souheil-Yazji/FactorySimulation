@@ -94,8 +94,7 @@ public class DistributionDelayGenerator implements DelayGenerator {
 	}
 
 	private float generateRandomExponential(float lambda) {
-		float expRand = (float) (Math.log(1-rand.nextFloat())/(-lambda));
-		return expRand;
+		return (float) (Math.log(1-rand.nextFloat())/(-lambda));
 	}
 
 	private float generateRandomEmpiricalForProduct2() {
@@ -115,8 +114,7 @@ public class DistributionDelayGenerator implements DelayGenerator {
 			}
 		}
 
-		float empRand = foundLowerBound + foundSlope * (randomNum - foundCDF);
-		return empRand;
+		return foundLowerBound + foundSlope * (randomNum - foundCDF);
 	}
 
 	private class EmpiricalSlopeInfo {
