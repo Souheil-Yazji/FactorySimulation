@@ -50,7 +50,6 @@ public class WorkStation implements ModelEventListener {
 
 			// create product
 			throughput++;
-			System.out.println("WorkStation " + id + " Produced " + productType);
 			isBusy = false;
 
 			// try to start another production
@@ -73,7 +72,6 @@ public class WorkStation implements ModelEventListener {
 		
 		// figure out how long it took and notify others that you produced a product
 		ApplicationContext.getInstance().getFutureEventList().enqueueEvent(new ProductionEvent(startTime + determineProcessTime(), id));
-		System.out.println("WorkStation " + id + " Starting Production of " + productType);
 		isBusy = true;
 	}
 }

@@ -95,7 +95,6 @@ public class DistributionDelayGenerator implements DelayGenerator {
 
 	private float generateRandomExponential(float lambda) {
 		float expRand = (float) (Math.log(1-rand.nextFloat())/(-lambda));
-		System.out.println("DistributionDelayGenerator : Generating a delay of " + expRand + " with lambda=" + lambda);
 		return expRand;
 	}
 
@@ -117,7 +116,6 @@ public class DistributionDelayGenerator implements DelayGenerator {
 		}
 
 		float empRand = foundLowerBound + foundSlope * (randomNum - foundCDF);
-		System.out.println("DistributionDelayGenerator : Generating a delay of " + empRand + " for Product 2");
 		return empRand;
 	}
 
