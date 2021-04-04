@@ -36,7 +36,6 @@ public class Inspector implements ModelEventListener {
 
 	public float getBlockTime() {
 		if (blockedEvent != null) {
-			System.out.println("Inspector " + id + " was blocked when metric was collected");
 			blockTimes.add(ApplicationContext.getInstance().getFutureEventList().getSystemTime() - blockedEvent.getEventTime());
 		}
 		return blockTimes.stream().reduce((a, b) -> a + b).orElse(0f);
@@ -91,7 +90,6 @@ public class Inspector implements ModelEventListener {
 		float addQueueTime = event.getEventTime() + determineInspectionTime(event.getComponentType());
 		AddToBufferEvent addToQueue = new AddToBufferEvent(addQueueTime, id, event.getComponentType());
 		ApplicationContext.getInstance().getFutureEventList().enqueueEvent(addToQueue);
-		System.out.println("Inspector " + id + " inspecting component " + event.getComponentType() + " until " + addQueueTime);
 	}
 
 	private void handleAddToQueueEvent(AddToBufferEvent event) {
@@ -103,7 +101,6 @@ public class Inspector implements ModelEventListener {
 		Buffer targetBuffer = determineTargetBuffer(event.getComponentType());
 		if (!targetBuffer.addComponent()) {
 			// We can't add to the full buffer, block this until the buffer is freed
-			System.out.println("Inspector " + id + " blocked");
 			blockedEvent = event;
 
 		} else {
@@ -146,7 +143,6 @@ public class Inspector implements ModelEventListener {
 	private ComponentType determineNextComponent() {
 		Random random = new Random();
 		int r = random.nextInt(componentTypes.size());
-		System.out.println("Inspector " + id + " Selected Component: " + componentTypes.get(r));
 		return componentTypes.get(r);
 	}
 }
