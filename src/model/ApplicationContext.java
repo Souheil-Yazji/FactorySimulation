@@ -19,6 +19,10 @@ public class ApplicationContext {
 	public static final String W2_PRODUCTION_DATA = "ws2.dat";
 	public static final String W3_PRODUCTION_DATA = "ws3.dat";
 
+	public static final String INSPECTOR_POLICY_LEAST_POP = "LEAST_POP";
+	public static final String INSPECTOR_POLICY_ORDERED = "ORDERED";
+	public static final String INSPECTOR_POLICY_INVERTED = "LEAST_POP_INVERTED";
+
 	private final FutureEventList eventList = new FutureEventList();
 	private final DelayGenerator delayGenerator = new DistributionDelayGenerator();
 

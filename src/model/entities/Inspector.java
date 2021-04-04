@@ -3,6 +3,7 @@ package model.entities;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 import model.ApplicationContext;
 import model.event.AddToBufferEvent;
@@ -17,13 +18,17 @@ public class Inspector implements ModelEventListener {
 
 	private AddToBufferEvent blockedEvent;
 	private List<BlockInterval> blockTimes = new ArrayList<>();
+	private final String bufferPolicy;
+	private int currentBuffer = 0;
 
 	private List<Buffer> targetBuffers = new ArrayList<>();
+
 	private List<ComponentType> componentTypes = new ArrayList<>();
 
-	public Inspector(int id, List<ComponentType> componentTypes) {
+	public Inspector(int id, List<ComponentType> componentTypes, String bufferPolicy) {
 		this.id = id;
 		this.componentTypes.addAll(componentTypes);
+		this.bufferPolicy = bufferPolicy;
 	}
 
 	public void addTargetBuffer(Buffer targetBuffer) {
@@ -136,16 +141,46 @@ public class Inspector implements ModelEventListener {
 	}
 
 	private Buffer determineTargetBuffer(ComponentType componentType) {
-		// get target buffers that can consume the componentType
-		// and finds the least populated target buffers
-		return targetBuffers.stream().filter(buffer -> buffer.getComponentType() == componentType)
-				.min(this::compareBuffers).orElseThrow();
+		if (bufferPolicy.equals(ApplicationContext.INSPECTOR_POLICY_LEAST_POP)) {
+			// get target buffers that can consume the componentType
+			// and finds the least populated target buffers
+			return targetBuffers.stream().filter(buffer -> buffer.getComponentType() == componentType)
+					.min(this::compareBuffers).orElseThrow();
+
+		} else if (bufferPolicy.equals(ApplicationContext.INSPECTOR_POLICY_ORDERED)) {
+			List<Buffer> eligibleBuffers = targetBuffers.stream().filter(buffer -> buffer.getComponentType() == componentType).collect(Collectors.toList());
+			
+			Buffer nextBuffer = eligibleBuffers.get(currentBuffer++);
+			if (currentBuffer == eligibleBuffers.size()) {
+				currentBuffer = 0;
+			}
+
+			if (eligibleBuffers.stream().allMatch(buf -> buf.size() == ApplicationContext.BUFFER_SIZE)) {
+				return nextBuffer;
+			}
+
+			while (nextBuffer.size() == ApplicationContext.BUFFER_SIZE) {
+				nextBuffer = eligibleBuffers.get(currentBuffer++);
+				if (currentBuffer == eligibleBuffers.size()) {
+					currentBuffer = 0;
+				}
+			}
+			return nextBuffer;
+
+		} else if (bufferPolicy.equals(ApplicationContext.INSPECTOR_POLICY_INVERTED)) {
+			return targetBuffers.stream().filter(buffer -> buffer.getComponentType() == componentType)
+					.min(this::compareBuffersInvertedPriority).orElseThrow();
+
+		} else {
+			System.out.println("Invalid Buffer Policy - " + bufferPolicy);
+			return null;
+		}
 	}
 
 	private int compareBuffers(Buffer a, Buffer b) {
 		// 1. send to a buffer with the least waiters
 		// 2. send to station 1, then station 2, then station 3 if tie.
-		if (a.size() < b.size() ) {
+		if (a.size() < b.size()) {
 			return -1;
 		} else if (a.size() == b.size()) {
 			if (a.getOwner() < b.getOwner() ) {
@@ -154,6 +189,24 @@ public class Inspector implements ModelEventListener {
 				return 0;
 			} else {
 				return 1;
+			}
+		} else {
+			return 1;
+		}
+	}
+
+	private int compareBuffersInvertedPriority(Buffer a, Buffer b) {
+		// 1. send to a buffer with the least waiters
+		// 2. send to station 3, then station 2, then station 1 if tie.
+		if (a.size() < b.size()) {
+			return -1;
+		} else if (a.size() == b.size()) {
+			if (a.getOwner() < b.getOwner() ) {
+				return 1;
+			} else if (a.getOwner() == b.getOwner()) {
+				return 0;
+			} else {
+				return -1;
 			}
 		} else {
 			return 1;
